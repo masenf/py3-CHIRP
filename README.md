@@ -23,6 +23,31 @@ py3-CHIRP has been tested in Python3.9 on various platforms. Known dependencies 
 
 For a list of supported radios (tested and untested) see [RADIOS.md](https://github.com/mpoletiek/py3-CHIRP/blob/main/RADIOS.md)
 
+### Creating a Development Environment
+
+#### Windows 
+
+The project requires pyGObject and the path of least resistance is
+[msys2](https://www.msys2.org/). This will also provide a more
+unix-like python environment that may make developing cross-platform
+simpler.
+
+Open a `msys2` terminal and install the dependencies:
+
+```shell
+pacman -Syu
+pacman -S mingw-w64-x86_64-python-pywin32 mingw-w64-x86_64-gtk3 mingw-w64-x86_64-python3 mingw-w64-x86_64-python3-gobject mingw-w64-python-py2exe mingw-w64-x86_64-wxPython
+```
+
+Create a virtualenv for development (in MSYS)
+
+```shell
+python -m venv --system-site-packages .venv
+./.env/bin/pip install -r requirements.txt -r test-requirements.txt -e .
+```
+
+Now this environment can accessed from your prompt or IDE of choice, such as
+VSCode or PyCharm.
 
 ### Running py3-CHIRP
 `chirpwx.py`
