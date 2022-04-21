@@ -242,7 +242,7 @@ class ChirpMemEdit(common.ChirpEditor):
         self._col_defs = self._setup_columns()
 
         self._grid = wx.grid.Grid(self)
-        self._grid.CreateGrid(self._features.memory_bounds[1] +
+        self._grid.CreateGrid(len(range(*self._features.memory_bounds)) +
                               len(self._features.valid_special_chans) + 1,
                               len(self._col_defs))
         self._grid.SetSelectionMode(wx.grid.Grid.SelectRows)
@@ -330,8 +330,6 @@ class ChirpMemEdit(common.ChirpEditor):
                                      self._radio.VARIANT)))
                 continue
             self.refresh_memory(m)
-
-        return
 
         for i in self._features.valid_special_chans:
             m = self._radio.get_memory(i)
