@@ -27,23 +27,21 @@ from chirp.settings import RadioSettingValueString, RadioSettings
 LOG = logging.getLogger(__name__)
 
 MEM_FORMAT = """
-#seekto 0x0030;
+#seekto 0x0000;
 struct {
   lbcd rx_freq[4];
   lbcd tx_freq[4];
   ul16 rx_tone;
   ul16 tx_tone;
-  u8 signaling:2,
-     unknown1:3,
-     bcl:1,
+  u8 unknown1:6,
      wide:1,
-     beatshift:1;
-  u8 pttid:2,
-     highpower:1,
-     scan:1
-     unknown2:4;
-  u8 unknown3[2];
-} memory[8];
+     highpower:1;
+  u8 unknown2:5,
+     bcl:1,
+     scan:1,
+     unknown3:1;
+  u8 unknown4[2];
+} memory[130];
 
 #seekto 0x0310;
 struct {
@@ -53,11 +51,13 @@ struct {
 
 """
 
-POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=5),
-                chirp_common.PowerLevel("High", watts=50)]
-MODES = ["NFM", "FM"]
-PTTID = ["", "BOT", "EOT", "Both"]
-SIGNAL = ["", "DTMF"]
+BOUNDS = [(136000000, 174000000), (400000000, 500000000)]
+OFFSETS = [600000, 5000000]
+MAX_CHANNELS = 128
+CHUNK_SIZE = 64
+POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=1),
+                chirp_common.PowerLevel("High", watts=5)]
+MODES = ["FM", "NFM"]
 
 
 def make_frame(cmd, addr, length, data=b""):
@@ -65,7 +65,7 @@ def make_frame(cmd, addr, length, data=b""):
 
 
 def send(radio, frame):
-    # LOG.debug("%04i P>R: %s" % (len(frame), util.hexprint(frame)))
+    LOG.debug("%04i P>R: %s" % (len(frame), util.hexprint(frame)))
     radio.pipe.write(frame)
 
 
@@ -74,34 +74,38 @@ def recv(radio, readdata=True):
     cmd, addr, length = struct.unpack(">BHB", hdr)
     if readdata:
         data = radio.pipe.read(length)
-        # LOG.debug("     P<R: %s" % util.hexprint(hdr + data))
+        LOG.debug("     P<R: %s" % util.hexprint(hdr + data))
         if len(data) != length:
             raise errors.RadioError("Radio sent %i bytes (expected %i)" % (
                     len(data), length))
     else:
         data = bytes(b"")
     radio.pipe.write(b"\x06")
+    ack = radio.pipe.read(1)
+    if ack != bytes(b"\x06"):
+        raise errors.RadioError("Radio didn't ack our read ack")
     return addr, data
 
 
 def do_ident(radio):
-    send(radio, b"PROGRAM")
+    send(radio, b"NiNHSG0N")
     ack = radio.pipe.read(1)
     if ack != bytes(b"\x06"):
         raise errors.RadioError("Radio refused program mode")
     radio.pipe.write(b"\x02")
     ident = radio.pipe.read(8)
-    try:
-        modelstr = ident[1:5].decode()
-    except UnicodeDecodeError:
-        LOG.debug('Model string was %r' % ident)
-        modelstr = '?'
-    if modelstr != radio.MODEL.split("-")[1]:
-        raise errors.RadioError("Incorrect model: TK-%s, expected %s" % (
-                modelstr, radio.MODEL))
-    LOG.info("Model: %s" % util.hexprint(ident))
+    LOG.debug('ident string was %r' % ident)
+    if ident != radio.IDENT:
+        raise errors.RadioError(
+            "Incorrect model: {}, expected {!r}".format(
+                util.hexprint(ident), radio.IDENT,
+            )
+        )
+    LOG.info("Model: %s (%s)" % (radio.MODEL, util.hexprint(ident)))
     radio.pipe.write(b"\x06")
     ack = radio.pipe.read(1)
+    if ack != bytes(b"\x06"):
+        raise errors.RadioError("Radio entered program mode, but didn't ack our ack")
 
 
 def do_download(radio):
@@ -110,8 +114,8 @@ def do_download(radio):
     do_ident(radio)
 
     data = bytes(b"")
-    for addr in range(0, 0x0400, 8):
-        send(radio, make_frame(bytes(b"R"), addr, 8))
+    for addr in range(0, 0x0820, CHUNK_SIZE):
+        send(radio, make_frame(bytes(b"R"), addr, CHUNK_SIZE))
         _addr, _data = recv(radio)
         if _addr != addr:
             raise errors.RadioError("Radio sent unexpected address")
@@ -123,18 +127,16 @@ def do_download(radio):
 
         status = chirp_common.Status()
         status.cur = addr
-        status.max = 0x0400
-        status.msg = "Cloning to radio"
+        status.max = 0x0820
+        status.msg = "Cloning from radio"
         radio.status_fn(status)
 
     radio.pipe.write(b"\x45")
-
-    data = (b"\x45\x58\x33\x34\x30\x32\xff\xff" + (b"\xff" * 8) +
-            data)
     return memmap.MemoryMapBytes(data)
 
 
 def do_upload(radio):
+    return
     radio.pipe.parity = "E"
     radio.pipe.timeout = 1
     do_ident(radio)
@@ -157,19 +159,34 @@ def do_upload(radio):
     radio.pipe.write(b"\x45")
 
 
-class KenwoodTKx102Radio(chirp_common.CloneModeRadio):
-    """Kenwood TK-x102"""
-    VENDOR = "Kenwood"
-    MODEL = "TK-x102"
+def offset_for(freq):
+    for bounds, offset in zip(BOUNDS, OFFSETS):
+        if bounds[0] <= freq <= bounds[1]:
+            return offset
+    return 0
+
+
+@directory.register
+class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
+    """
+    Lanchonlh HG-UV98
+
+    Memory map decoding by KG7KMV
+    Chirp integration by KF7HVM
+    """
+    VENDOR = "Lanchonlh"
+    MODEL = "HG-UV98"
+    IDENT = b"P3107\0\0\0"
     BAUD_RATE = 9600
     NEEDS_COMPAT_SERIAL = False
 
     _memsize = 0x410
+    _upper = 128
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
-        rf.has_settings = True
-        rf.has_cross = True
+        rf.has_settings = False
+        rf.has_cross = False
         rf.has_bank = False
         rf.has_tuning_step = False
         rf.has_name = False
@@ -186,7 +203,7 @@ class KenwoodTKx102Radio(chirp_common.CloneModeRadio):
             "DTCS->DTCS"]
         rf.valid_power_levels = POWER_LEVELS
         rf.valid_skips = ["", "S"]
-        rf.valid_bands = [self._range]
+        rf.valid_bands = [(136000000, 174000000), (400000000, 500000000)]
         rf.memory_bounds = (1, self._upper)
         return rf
 
@@ -286,21 +303,6 @@ class KenwoodTKx102Radio(chirp_common.CloneModeRadio):
                            RadioSettingValueBoolean(bool(_mem.bcl)))
         mem.extra.append(bcl)
 
-        beat = RadioSetting("beatshift", "Beat Shift",
-                            RadioSettingValueBoolean(bool(_mem.beatshift)))
-        mem.extra.append(beat)
-
-        pttid = RadioSetting("pttid", "PTT ID",
-                             RadioSettingValueList(PTTID,
-                                                   PTTID[_mem.pttid]))
-        mem.extra.append(pttid)
-
-        signal = RadioSetting("signaling", "Signaling",
-                              RadioSettingValueList(SIGNAL,
-                                                    SIGNAL[
-                                                      _mem.signaling & 0x01]))
-        mem.extra.append(signal)
-
         return mem
 
     def _set_tone(self, mem, _mem):
@@ -348,30 +350,28 @@ class KenwoodTKx102Radio(chirp_common.CloneModeRadio):
             _mem.set_raw("\xFF" * 16)
             return
 
-        _mem.unknown3[0] = 0x07
-        _mem.unknown3[1] = 0x22
+        # clear reserved fields
+        _mem.unknown1 = 0xFF
+        _mem.unknown2 = 0xFF
+        _mem.unknown3 = 0xFF
+        _mem.unknown4 = (0xFF, 0xFF)
         _mem.rx_freq = mem.freq / 10
+        mem_offset = mem.offset or offset_for(mem.freq)
         if mem.duplex == "+":
-            _mem.tx_freq = (mem.freq + mem.offset) / 10
+            _mem.tx_freq = (mem.freq + mem_offset) / 10
         elif mem.duplex == "-":
-            _mem.tx_freq = (mem.freq - mem.offset) / 10
+            _mem.tx_freq = (mem.freq - mem_offset) / 10
         else:
             _mem.tx_freq = mem.freq / 10
 
         self._set_tone(mem, _mem)
 
         _mem.highpower = mem.power == POWER_LEVELS[1]
-        _mem.wide = mem.mode == "FM"
+        _mem.wide = mem.mode == "NFM"
         _mem.scan = mem.skip != "S"
 
         for setting in mem.extra:
-            if setting.get_name == "signaling":
-                if setting.value == "DTMF":
-                    _mem.signaling = 0x03
-                else:
-                    _mem.signaling = 0x00
-            else:
-                setattr(_mem, setting.get_name(), setting.value)
+            setattr(_mem, setting.get_name(), setting.value)
 
     def get_settings(self):
         _mem = self._memobj
@@ -420,37 +420,3 @@ class KenwoodTKx102Radio(chirp_common.CloneModeRadio):
             else:
                 value = element.value
             setattr(obj, setting, value)
-
-    @classmethod
-    def match_model(cls, filedata, filename):
-        model = filedata[0x03D1:0x03D5]
-        LOG.debug(model)
-        return model == cls.MODEL.split("-")[1]
-
-
-@directory.register
-class KenwoodTK7102Radio(KenwoodTKx102Radio):
-    MODEL = "TK-7102"
-    _range = (136000000, 174000000)
-    _upper = 4
-
-
-@directory.register
-class KenwoodTK8102Radio(KenwoodTKx102Radio):
-    MODEL = "TK-8102"
-    _range = (400000000, 500000000)
-    _upper = 4
-
-
-@directory.register
-class KenwoodTK7108Radio(KenwoodTKx102Radio):
-    MODEL = "TK-7108"
-    _range = (136000000, 174000000)
-    _upper = 8
-
-
-@directory.register
-class KenwoodTK8108Radio(KenwoodTKx102Radio):
-    MODEL = "TK-8108"
-    _range = (400000000, 500000000)
-    _upper = 8
