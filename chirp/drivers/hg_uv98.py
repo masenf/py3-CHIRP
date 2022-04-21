@@ -43,17 +43,19 @@ struct {
   u8 unknown4[2];
 } memory[130];
 
-#seekto 0x0310;
+#seekto 0x1000;
 struct {
-  char line1[32];
-  char line2[32];
-} messages;
+  char name[11];
+  u8 unknown[5];
+} name[128];
 
 """
 
 BOUNDS = [(136000000, 174000000), (400000000, 500000000)]
 OFFSETS = [600000, 5000000]
 MAX_CHANNELS = 128
+MAX_NAME = 8
+NAME_FIELD_SIZE = 11
 CHUNK_SIZE = 64
 POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=1),
                 chirp_common.PowerLevel("High", watts=5)]
@@ -114,7 +116,7 @@ def do_download(radio):
     do_ident(radio)
 
     data = bytes(b"")
-    for addr in range(0, 0x0820, CHUNK_SIZE):
+    for addr in range(0, 0x1800, CHUNK_SIZE):
         send(radio, make_frame(bytes(b"R"), addr, CHUNK_SIZE))
         _addr, _data = recv(radio)
         if _addr != addr:
@@ -189,7 +191,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
         rf.has_cross = False
         rf.has_bank = False
         rf.has_tuning_step = False
-        rf.has_name = False
+        rf.has_name = True
         rf.has_rx_dtcs = True
         rf.valid_tmodes = ['', 'Tone', 'TSQL', 'DTCS', 'Cross']
         rf.valid_modes = MODES
@@ -204,6 +206,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
         rf.valid_power_levels = POWER_LEVELS
         rf.valid_skips = ["", "S"]
         rf.valid_bands = [(136000000, 174000000), (400000000, 500000000)]
+        rf.valid_name_length = 8
         rf.memory_bounds = (1, self._upper)
         return rf
 
@@ -273,6 +276,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
 
     def get_memory(self, number):
         _mem = self._memobj.memory[number - 1]
+        _name = self._memobj.name[number - 1]
 
         mem = chirp_common.Memory()
         mem.number = number
@@ -281,6 +285,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
             mem.empty = True
             return mem
 
+        mem.name, _, _ = _name.name.get_raw().partition("\xFF")
         mem.freq = int(_mem.rx_freq) * 10
         offset = (int(_mem.tx_freq) * 10) - mem.freq
         if offset < 0:
@@ -345,10 +350,18 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
 
     def set_memory(self, mem):
         _mem = self._memobj.memory[mem.number - 1]
+        _name = self._memobj.name[mem.number - 1]
 
         if mem.empty:
             _mem.set_raw("\xFF" * 16)
             return
+
+        _namelength = self.get_features().valid_name_length
+        for i in range(NAME_FIELD_SIZE):
+            try:
+                _name.name[i] = mem.name[i]
+            except IndexError:
+                _name.name[i] = "\xFF"
 
         # clear reserved fields
         _mem.unknown1 = 0xFF
