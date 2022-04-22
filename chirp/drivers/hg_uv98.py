@@ -234,7 +234,7 @@ def offset_for(freq):
 
 
 @directory.register
-class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
+class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRadio):
     """
     Lanchonlh HG-UV98
 
@@ -248,6 +248,17 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio):
     NEEDS_COMPAT_SERIAL = False
 
     _upper = MAX_CHANNELS
+
+    @classmethod
+    def get_prompts(cls):
+        rp = chirp_common.RadioPrompts()
+        rp.experimental = (
+            "This Lanchonlh HG-UV98 driver is an alpha version. "
+            "Proceed with Caution and backup your data. "
+            "Always confirm the correctness of your settings with the "
+            "official programming tool."
+        )
+        return rp
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
