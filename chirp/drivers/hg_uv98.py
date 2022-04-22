@@ -43,6 +43,60 @@ struct {
   u8 unknown4[2];
 } memory[130];
 
+#seekto 0x0a00;
+struct {
+  u8 abr;  // 0x0a00
+  u8 save;
+  u8 ch_a_step;
+  u8 ch_b_step;
+  u8 vox_grd;
+  u8 ch_a_sql;
+  u8 ch_b_sql;
+  u8 roger;
+  u8 ch_a_ch_mdf;
+  u8 ch_b_ch_mdf;
+  u8 ch_a_v_m;
+  u8 ch_b_v_m;
+  u8 tdr;
+  u8 unknown5[2];
+  u8 unknown6[5];  // 0x0a10
+  u8 english;
+  u8 beep;
+  u8 voice;
+  u8 night_mode;
+  u8 abr_lv;  // backlight level
+  u8 tot;
+  u8 toa;
+  u8 vox_dly;
+  u8 sc_rev;
+  u8 lockmode;
+  u8 autolock;
+  u8 unknown7;  // 0x0a20
+  u8 pf_key1_short;
+  u8 pf_key1_long;
+  u8 pf_key2_short;
+  u8 pf_key2_long;
+  u8 top_short;
+  u8 top_long;
+  u8 rpt_rct;
+  u8 sc_qt;
+  u8 pri_ch;
+  u8 pri_scn;
+  u8 unknown8;
+  u8 aprs_rx_ch;
+  u8 ch_a_mute;
+  u8 ch_b_mute;
+  u8 unknown9[7];  // 0x0a30
+  u8 tx_priority;
+  u8 aprs_rx_popup;
+  u8 aprs_rx_tone;
+  u8 aprs_tx_tone;
+  u8 auto_lock_dly;
+  u8 menu_dly;
+  u8 beacon_exit_dly;
+  u8 unknown10[2];
+} settings;
+
 #seekto 0x1000;
 struct {
   char name[11];
