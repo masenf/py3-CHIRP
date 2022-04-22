@@ -122,7 +122,9 @@ SPECIAL_CHANNELS = {
 
 
 def make_frame(cmd, addr, length, data=b""):
-    return struct.pack(">BHB", ord(cmd), addr, length) + bytes(data)
+    if not isinstance(data, bytes):
+        data = data.decode("ascii")
+    return struct.pack(">BHB", ord(cmd), addr, length) + data
 
 
 def send(radio, frame):
@@ -140,19 +142,19 @@ def recv(radio, readdata=True):
             raise errors.RadioError("Radio sent %i bytes (expected %i)" % (
                     len(data), length))
     else:
-        data = bytes(b"")
+        data = b""
     radio.pipe.write(b"\x06")
     ack = radio.pipe.read(1)
-    if ack != bytes(b"\x06"):
+    if ack != b"\x06":
         raise errors.RadioError("Radio didn't ack our read ack")
-    return addr, data
+    return addr, bytes(data)
 
 
 def do_ident(radio):
     send(radio, b"NiNHSG0N")
     ack = radio.pipe.read(1)
-    if ack != bytes(b"\x06"):
-        raise errors.RadioError("Radio refused program mode")
+    if ack != b"\x06":
+        raise errors.RadioError("Radio refused program mode: {}".format(ack))
     radio.pipe.write(b"\x02")
     ident = radio.pipe.read(8)
     LOG.debug('ident string was %r' % ident)
@@ -165,7 +167,7 @@ def do_ident(radio):
     LOG.info("Model: %s (%s)" % (radio.MODEL, util.hexprint(ident)))
     radio.pipe.write(b"\x06")
     ack = radio.pipe.read(1)
-    if ack != bytes(b"\x06"):
+    if ack != b"\x06":
         raise errors.RadioError("Radio entered program mode, but didn't ack our ack")
 
 
@@ -183,7 +185,7 @@ def do_download(radio):
         data += _data
         radio.pipe.write(b"\x06")
         ack = radio.pipe.read(1)
-        if ack != bytes(b"\x06"):
+        if ack != b"\x06":
             raise errors.RadioError("Radio refused block at %04x" % addr)
 
         status = chirp_common.Status()
@@ -201,15 +203,18 @@ def do_upload(radio):
     radio.pipe.timeout = 1
     do_ident(radio)
 
-    mmap = radio._mmap.get_byte_compatible()
+    mmap = radio._mmap
+    if callable(getattr(mmap, "get_byte_compatible", None)):
+        # for py3-CHIRP
+        mmap = mmap.get_byte_compatible()
     for addr in range(0, MAX_ADDR, CHUNK_SIZE):
         send(radio, make_frame(b"W", addr, CHUNK_SIZE, mmap[addr:addr + CHUNK_SIZE]))
         ack = radio.pipe.read(1)
-        if ack != bytes(b"\x06"):
+        if ack != b"\x06":
             raise errors.RadioError("Radio refused block at %04x" % addr)
         radio.pipe.write(b"\x06")
         ack = radio.pipe.read(1)
-        if ack != bytes(b"\x06"):
+        if ack != b"\x06":
             raise errors.RadioError("Radio didn't ack our read ack")
 
         status = chirp_common.Status()
