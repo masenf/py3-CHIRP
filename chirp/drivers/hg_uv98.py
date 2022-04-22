@@ -57,6 +57,7 @@ MAX_CHANNELS = 128
 MAX_NAME = 8
 NAME_FIELD_SIZE = 11
 CHUNK_SIZE = 64
+MAX_ADDR = 0x1800
 POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=1),
                 chirp_common.PowerLevel("High", watts=5)]
 MODES = ["FM", "NFM"]
@@ -120,7 +121,7 @@ def do_download(radio):
     do_ident(radio)
 
     data = bytes(b"")
-    for addr in range(0, 0x1800, CHUNK_SIZE):
+    for addr in range(0, MAX_ADDR, CHUNK_SIZE):
         send(radio, make_frame(bytes(b"R"), addr, CHUNK_SIZE))
         _addr, _data = recv(radio)
         if _addr != addr:
@@ -133,7 +134,7 @@ def do_download(radio):
 
         status = chirp_common.Status()
         status.cur = addr
-        status.max = 0x0820
+        status.max = MAX_ADDR
         status.msg = "Cloning from radio"
         radio.status_fn(status)
 
@@ -142,23 +143,24 @@ def do_download(radio):
 
 
 def do_upload(radio):
-    return
     radio.pipe.parity = "E"
     radio.pipe.timeout = 1
     do_ident(radio)
 
     mmap = radio._mmap.get_byte_compatible()
-    for addr in range(0, 0x0400, 8):
-        eaddr = addr + 16
-        send(radio, make_frame(b"W", addr, 8, mmap[eaddr:eaddr + 8]))
+    for addr in range(0, MAX_ADDR, CHUNK_SIZE):
+        send(radio, make_frame(b"W", addr, CHUNK_SIZE, mmap[addr:addr + CHUNK_SIZE]))
         ack = radio.pipe.read(1)
         if ack != bytes(b"\x06"):
             raise errors.RadioError("Radio refused block at %04x" % addr)
         radio.pipe.write(b"\x06")
+        ack = radio.pipe.read(1)
+        if ack != bytes(b"\x06"):
+            raise errors.RadioError("Radio didn't ack our read ack")
 
         status = chirp_common.Status()
         status.cur = addr
-        status.max = 0x0400
+        status.max = MAX_ADDR
         status.msg = "Cloning to radio"
         radio.status_fn(status)
 
