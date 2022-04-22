@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2013 Dan Smith <dsmith@danplanet.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -12,6 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Lanchonlh HG-UV98 driver written by
+#   Masen Furer <kf7hvm@0x26.net>
+# With assistance from
+#  KG7KMV and Bartłomiej Zieliński
+# Based on the implementation of Kenwood TK-8102
 
 from builtins import bytes
 import os
