@@ -526,7 +526,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         vfo = RadioSettingGroup("vfo", "VFO")
         advanced = RadioSettingGroup("advanced", "Advanced")
         aprs = RadioSettingGroup("aprs", "APRS")
-        top = RadioSettings(basic, display, scan, vfo, advanced, aprs)
+        top = RadioSettings(basic, display, scan, buttons, vfo, advanced, aprs)
 
         basic.append(
             RadioSetting(
