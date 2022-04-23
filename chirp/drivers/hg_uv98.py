@@ -794,16 +794,18 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
                 RadioSettingValueBoolean(_settings.rpt_rct),
             )
         )
+        # XXX: not sure if this is callsign or startup text
+        #      either way, it gets reset to APRS callsign after boot
         aprs.append(
             RadioSetting(
                 "callsign",
                 "Callsign (w/ SSID)",
                 RadioSettingValueString(
                     0, 9,
-                    str(_mem.aprs.callsign),
+                    _mem.aprs.callsign.get_raw().partition("\x00")[0],
                     charset=chirp_common.CHARSET_UPPER_NUMERIC + "-\x00",
                     autopad=True,
-                )
+                ),
             )
         )
         aprs.append(
@@ -884,6 +886,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
                 # convert 0-indexed list into 1-indexed value
                 value.set_value(str(int(value.get_value()) + 1))
             if name == "callsign":
+                continue  # XXX: can't change this at the moment
                 # change padded space to null terminator
                 callsign = value.get_value()
                 if " " in callsign:
