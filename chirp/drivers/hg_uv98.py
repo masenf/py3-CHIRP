@@ -584,7 +584,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
             RadioSetting(
                 "abr_lv",
                 "Back Light Brightness",
-                RadioSettingValueList(SQL_LIST, SQL_LIST[_settings.ch_b_sql]),
+                RadioSettingValueList(ABR_LV_LIST, ABR_LV_LIST[_settings.abr_lv]),
             )
         )
         display.append(
