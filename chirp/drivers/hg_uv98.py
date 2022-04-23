@@ -60,12 +60,12 @@ struct {
   u8 ch_a_sql;
   u8 ch_b_sql;
   u8 roger;
-  u8 ch_a_ch_mdf;
-  u8 ch_b_ch_mdf;
   u8 ch_a_v_m;
   u8 ch_b_v_m;
+  u8 ch_a_ch_mdf;
+  u8 ch_b_ch_mdf;
   u8 tdr;
-  u8 unknown5[2];
+  u8 unknown5[3];
   u8 unknown6[5];  // 0x0a10
   u8 english;
   u8 beep;
@@ -79,10 +79,10 @@ struct {
   u8 lockmode;
   u8 autolock;
   u8 unknown7;  // 0x0a20
-  u8 pf_key1_short;
-  u8 pf_key1_long;
-  u8 pf_key2_short;
-  u8 pf_key2_long;
+  u8 pf1_short;
+  u8 pf1_long;
+  u8 pf2_short;
+  u8 pf2_long;
   u8 top_short;
   u8 top_long;
   u8 rpt_rct;
@@ -90,7 +90,7 @@ struct {
   u8 pri_ch;
   u8 pri_scn;
   u8 unknown8;
-  u8 aprs_rx_ch;
+  u8 aprs_rx_band;
   u8 ch_a_mute;
   u8 ch_b_mute;
   u8 unknown9[7];  // 0x0a30
