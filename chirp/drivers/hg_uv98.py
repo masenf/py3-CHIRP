@@ -306,6 +306,8 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         rf.has_tuning_step = False
         rf.has_name = True
         rf.has_rx_dtcs = True
+        rf.valid_characters = chirp_common.CHARSET_ALPHANUMERIC
+        rf.valid_tuning_steps = [5.0, 6.25, 10.0, 12.5, 20.0, 25.0, 50.0, 100.0]
         rf.valid_tmodes = ['', 'Tone', 'TSQL', 'DTCS', 'Cross']
         rf.valid_modes = MODES
         rf.valid_cross_modes = [
