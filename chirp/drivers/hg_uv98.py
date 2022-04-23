@@ -115,6 +115,16 @@ struct {
   u8 unknown[5];
 } name[128];
 
+struct {
+    char callsign[9];
+    u8 null;
+} aprs;
+
+#seekto 0x1f80;
+struct {
+  ul32 unknown[8];
+} unknown_settings;
+
 """
 
 BOUNDS = [(136000000, 174000000), (400000000, 500000000)]
@@ -123,7 +133,7 @@ MAX_CHANNELS = 128
 MAX_NAME = 8
 NAME_FIELD_SIZE = 11
 CHUNK_SIZE = 64
-MAX_ADDR = 0x1800
+MAX_ADDR = 0x2000
 POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=1),
                 chirp_common.PowerLevel("High", watts=5)]
 MODES = ["FM", "NFM"]
@@ -518,7 +528,6 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         aprs = RadioSettingGroup("aprs", "APRS")
         top = RadioSettings(basic, display, scan, vfo, advanced, aprs)
 
-        print(_settings)
         basic.append(
             RadioSetting(
                 "save",
@@ -787,6 +796,18 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         )
         aprs.append(
             RadioSetting(
+                "callsign",
+                "Callsign (w/ SSID)",
+                RadioSettingValueString(
+                    0, 9,
+                    str(_mem.aprs.callsign),
+                    charset=chirp_common.CHARSET_UPPER_NUMERIC + "-\x00",
+                    autopad=True,
+                )
+            )
+        )
+        aprs.append(
+            RadioSetting(
                 "aprs_rx_band",
                 "RX Band",
                 RadioSettingValueList(APRS_RX_LIST, APRS_RX_LIST[_settings.aprs_rx_band]),
@@ -845,7 +866,12 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         return top
 
     def set_settings(self, settings):
-        _settings = self._memobj.settings
+        _mem = self._memobj
+        _settings = _mem.settings
+        _aprs = _mem.aprs
+        # set the null terminator for callsign
+        _aprs.null = 0
+
         for element in settings:
             if not isinstance(element, RadioSetting):
                 self.set_settings(element)
@@ -853,11 +879,17 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
             name = element.get_name()
             value = element.value
 
-            print("setattr(_settings, {!r}, {!r}".format(name, value))
-
             # perform an setting munging here
             if name in ("pri_ch", "ch_a_mem_ch", "ch_b_mem_ch"):
                 # convert 0-indexed list into 1-indexed value
                 value.set_value(str(int(value.get_value()) + 1))
+            if name == "callsign":
+                # change padded space to null terminator
+                callsign = value.get_value()
+                if " " in callsign:
+                    value.set_value(callsign.replace(" ", "\x00"))
 
-            setattr(_settings, name, value)
+            if hasattr(_settings, name):
+                setattr(_settings, name, value)
+            elif hasattr(_aprs, name):
+                setattr(_aprs, name, value)
