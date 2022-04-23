@@ -98,10 +98,15 @@ struct {
   u8 aprs_rx_popup;
   u8 aprs_rx_tone;
   u8 aprs_tx_tone;
-  u8 auto_lock_dly;
+  u8 unknown10;
   u8 menu_dly;
   u8 beacon_exit_dly;
-  u8 unknown10[2];
+  u8 auto_lock_dly;
+  u8 unknown11;
+  u8 unknown12[2];        // 0x0a40
+  u8 ch_a_mem_ch;
+  u8 ch_b_mem_ch;
+  u8 unknown13[12];
 } settings;
 
 #seekto 0x1000;
@@ -710,6 +715,20 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
         )
         vfo.append(
             RadioSetting(
+                "ch_a_mem_ch",
+                "Memory Channel (A)",
+                RadioSettingValueList(CH_LIST, CH_LIST[_settings.ch_a_mem_ch - 1]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_b_mem_ch",
+                "Memory Channel (B)",
+                RadioSettingValueList(CH_LIST, CH_LIST[_settings.ch_b_mem_ch - 1]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
                 "ch_a_ch_mdf",
                 "Memory Display Format (A)",
                 RadioSettingValueList(MDF_LIST, MDF_LIST[_settings.ch_a_ch_mdf]),
@@ -835,7 +854,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
             print("setattr(_settings, {!r}, {!r}".format(name, value))
 
             # perform an setting munging here
-            if name == "pri_ch":
+            if name in ("pri_ch", "ch_a_mem_ch", "ch_b_mem_ch"):
                 # convert 0-indexed list into 1-indexed value
                 value.set_value(str(int(value.get_value()) + 1))
 
