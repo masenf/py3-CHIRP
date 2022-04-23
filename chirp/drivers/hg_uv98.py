@@ -99,9 +99,9 @@ struct {
   u8 aprs_rx_tone;
   u8 aprs_tx_tone;
   u8 unknown10;
+  u8 auto_lock_dly;
   u8 menu_dly;
   u8 beacon_exit_dly;
-  u8 auto_lock_dly;
   u8 unknown11;
   u8 unknown12[2];        // 0x0a40
   u8 ch_a_mem_ch;
