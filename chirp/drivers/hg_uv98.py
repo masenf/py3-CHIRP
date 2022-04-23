@@ -127,6 +127,32 @@ SPECIAL_CHANNELS = {
     130: ("VFO-B", "B"),
 }
 
+# Settings maps
+ABR_LIST = [str(v) for v in range(0, 151, 5)]
+STEP_LIST = ["5.0", "6.25", "10.0", "12.5", "25.0", "50.0", "100.0"]
+VOX_LIST = ["OFF", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+SQL_LIST = [str(v) for v in range(0, 10)]
+ROGER_LIST = ["OFF", "BEGIN", "END", "BOTH"]
+MDF_LIST = ["NUM+FREQ", "NUMBER", "NAME"]
+VM_LIST = ["VFO", "MEMORY"]
+LANG_LIST = ["CHINESE", "ENGLISH"]
+ABR_LV_LIST = [str(v) for v in range(1, 11)]
+TOT_LIST = [str(v) for v in range(0, 601, 15)]
+TOA_LIST = ["OFF"] + ["{} S".format(v) for v in range(1, 11)]
+VOX_DLY_LIST = [str(v) for v in range(1, 11)]
+SC_REV_LIST = ["TIME", "BUSY", "HOLD"]
+LOCKMODE_LIST = ["KEY", "KEY+DIAL", "KEY+DIAL+PTT"]
+AUTOLOCK_LIST = ["AUTO", "Manual"]
+PF1_LIST = ["BACK LIGHT", "SCAN", "SQUELCH", "TORCH", "BAND A/B"]
+PF2_LIST = ["BEACON", "LIST", "TORCH", "BACK LIGHT"]
+TOP_LIST = ["ALERT", "REMOTE ALERT", "TORCH", "TXP", "CH MDF", "OFF_NET_KEY"]
+SC_QT_LIST = ["Decode", "Encode", "Decode+Encode"]
+CH_LIST = [str(v) for v in range(1, 129)]
+APRS_RX_LIST = ["OFF", "BAND A", "BAND B"]
+TX_PRIORITY_LIST = ["VOICE", "APRS"]
+AUTOLOCK_DLY_LIST = ["{} S".format(v) for v in range(5, 31)]
+BEACON_EXIT_DLY_LIST = MENU_DLY_LIST = AUTOLOCK_DLY_LIST
+
 
 def make_frame(cmd, addr, length, data=b""):
     if not isinstance(data, bytes):
@@ -269,7 +295,7 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
-        rf.has_settings = False
+        rf.has_settings = True
         rf.has_cross = False
         rf.has_bank = False
         rf.has_tuning_step = False
@@ -475,48 +501,342 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
 
     def get_settings(self):
         _mem = self._memobj
+        _settings = _mem.settings
         basic = RadioSettingGroup("basic", "Basic")
-        top = RadioSettings(basic)
+        display = RadioSettingGroup("display", "Display")
+        scan = RadioSettingGroup("scan", "Scan")
+        buttons = RadioSettingGroup("buttons", "Buttons")
+        vfo = RadioSettingGroup("vfo", "VFO")
+        advanced = RadioSettingGroup("advanced", "Advanced")
+        aprs = RadioSettingGroup("aprs", "APRS")
+        top = RadioSettings(basic, display, scan, vfo, advanced, aprs)
 
-        def _f(val):
-            string = ""
-            for char in str(val):
-                if char == "\xFF":
-                    break
-                string += char
-            return string
-
-        line1 = RadioSetting("messages.line1", "Message Line 1",
-                             RadioSettingValueString(0, 32,
-                                                     _f(_mem.messages.line1),
-                                                     autopad=False))
-        basic.append(line1)
-
-        line2 = RadioSetting("messages.line2", "Message Line 2",
-                             RadioSettingValueString(0, 32,
-                                                     _f(_mem.messages.line2),
-                                                     autopad=False))
-        basic.append(line2)
+        print(_settings)
+        basic.append(
+            RadioSetting(
+                "save",
+                "Power Save",
+                RadioSettingValueBoolean(_settings.save),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "roger",
+                "Roger Beep",
+                RadioSettingValueList(ROGER_LIST, ROGER_LIST[_settings.roger]),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "beep",
+                "System Beep",
+                RadioSettingValueBoolean(_settings.beep),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "tot",
+                "Timeout Timer (sec)",
+                RadioSettingValueList(TOT_LIST, TOT_LIST[_settings.tot]),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "toa",
+                "Timeout Timer Alarm",
+                RadioSettingValueList(TOA_LIST, TOA_LIST[_settings.tot]),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "lockmode",
+                "Lock Mode",
+                RadioSettingValueList(LOCKMODE_LIST, LOCKMODE_LIST[_settings.lockmode]),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "autolock",
+                "Auto Lock",
+                RadioSettingValueList(AUTOLOCK_LIST, AUTOLOCK_LIST[_settings.autolock]),
+            )
+        )
+        basic.append(
+            RadioSetting(
+                "auto_lock_dly",
+                "Auto Lock Delay",
+                RadioSettingValueList(AUTOLOCK_DLY_LIST, AUTOLOCK_DLY_LIST[_settings.auto_lock_dly]),
+            )
+        )
+        display.append(
+            RadioSetting(
+                "abr",
+                "Screen Save",
+                RadioSettingValueList(ABR_LIST, ABR_LIST[_settings.abr]),
+            )
+        )
+        display.append(
+            RadioSetting(
+                "abr_lv",
+                "Back Light Brightness",
+                RadioSettingValueList(SQL_LIST, SQL_LIST[_settings.ch_b_sql]),
+            )
+        )
+        display.append(
+            RadioSetting(
+                "night_mode",
+                "Night Mode (Light on Dark)",
+                RadioSettingValueBoolean(_settings.night_mode),
+            )
+        )
+        display.append(
+            RadioSetting(
+                "menu_dly",
+                "Menu Delay",
+                RadioSettingValueList(MENU_DLY_LIST, MENU_DLY_LIST[_settings.menu_dly]),
+            )
+        )
+        display.append(
+            RadioSetting(
+                "english",
+                "Language",
+                RadioSettingValueList(LANG_LIST, LANG_LIST[_settings.english]),
+            )
+        )
+        scan.append(
+            RadioSetting(
+                "pri_scn",
+                "Priority Scan",
+                RadioSettingValueBoolean(_settings.pri_scn),
+            )
+        )
+        scan.append(
+            RadioSetting(
+                "pri_ch",
+                "Priority Channel",
+                RadioSettingValueList(CH_LIST, CH_LIST[_settings.pri_ch - 1]),
+            )
+        )
+        scan.append(
+            RadioSetting(
+                "sc_rev",
+                "Scan Resume",
+                RadioSettingValueList(SC_REV_LIST, SC_REV_LIST[_settings.sc_rev]),
+            )
+        )
+        scan.append(
+            RadioSetting(
+                "sc_qt",
+                "Code Save",
+                RadioSettingValueList(SC_QT_LIST, SC_QT_LIST[_settings.sc_qt]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "pf1_short",
+                "PF1 (Side, Upper) Button Short Press",
+                RadioSettingValueList(PF1_LIST, PF1_LIST[_settings.pf1_short]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "pf1_long",
+                "PF1 (Side, Upper) Button Long Press",
+                RadioSettingValueList(PF1_LIST, PF1_LIST[_settings.pf1_long]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "pf2_short",
+                "PF2 (Side, Lower) Button Short Press",
+                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.pf2_short]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "pf2_long",
+                "PF2 (Side, Lower) Button Long Press",
+                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.pf2_long]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "top_short",
+                "Top Button Short Press",
+                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.top_short]),
+            )
+        )
+        buttons.append(
+            RadioSetting(
+                "top_long",
+                "Top Button Long Press",
+                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.top_long]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "tdr",
+                "VFO B Enabled",
+                RadioSettingValueBoolean(_settings.tdr),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_a_step",
+                "VFO Frequency Step (A)",
+                RadioSettingValueList(STEP_LIST, STEP_LIST[_settings.ch_a_step]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_b_step",
+                "VFO Frequency Step (B)",
+                RadioSettingValueList(STEP_LIST, STEP_LIST[_settings.ch_b_step]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_a_sql",
+                "Squelch (A)",
+                RadioSettingValueList(SQL_LIST, SQL_LIST[_settings.ch_a_sql]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_b_sql",
+                "Squelch (B)",
+                RadioSettingValueList(SQL_LIST, SQL_LIST[_settings.ch_b_sql]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_a_ch_mdf",
+                "Memory Display Format (A)",
+                RadioSettingValueList(MDF_LIST, MDF_LIST[_settings.ch_a_ch_mdf]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_b_ch_mdf",
+                "Memory Display Format (B)",
+                RadioSettingValueList(MDF_LIST, MDF_LIST[_settings.ch_b_ch_mdf]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_a_v_m",
+                "VFO/MEM (A)",
+                RadioSettingValueList(VM_LIST, VM_LIST[_settings.ch_a_v_m]),
+            )
+        )
+        vfo.append(
+            RadioSetting(
+                "ch_b_v_m",
+                "VFO/MEM (B)",
+                RadioSettingValueList(VM_LIST, VM_LIST[_settings.ch_b_v_m]),
+            )
+        )
+        advanced.append(
+            RadioSetting(
+                "vox_grd",
+                "VOX Sensitivity",
+                RadioSettingValueList(VOX_LIST, VOX_LIST[_settings.vox_grd]),
+            )
+        )
+        advanced.append(
+            RadioSetting(
+                "vox_dly",
+                "VOX Delay",
+                RadioSettingValueList(VOX_DLY_LIST, VOX_DLY_LIST[_settings.vox_dly]),
+            )
+        )
+        advanced.append(
+            RadioSetting(
+                "voice",
+                "Voice Assist",
+                RadioSettingValueBoolean(_settings.voice),
+            )
+        )
+        advanced.append(
+            RadioSetting(
+                "rpt_rct",
+                "RPT Roger",
+                RadioSettingValueBoolean(_settings.rpt_rct),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "aprs_rx_band",
+                "RX Band",
+                RadioSettingValueList(APRS_RX_LIST, APRS_RX_LIST[_settings.aprs_rx_band]),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "ch_a_mute",
+                "Band A Mute",
+                RadioSettingValueBoolean(_settings.ch_a_mute),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "ch_b_mute",
+                "Band B Mute",
+                RadioSettingValueBoolean(_settings.ch_b_mute),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "tx_priority",
+                "TX Priority",
+                RadioSettingValueList(TX_PRIORITY_LIST, TX_PRIORITY_LIST[_settings.tx_priority]),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "aprs_rx_popup",
+                "APRS Popup",
+                RadioSettingValueBoolean(_settings.aprs_rx_popup),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "aprs_rx_tone",
+                "RX Tone",
+                RadioSettingValueBoolean(_settings.aprs_rx_tone),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "aprs_tx_tone",
+                "TX Tone",
+                RadioSettingValueBoolean(_settings.aprs_tx_tone),
+            )
+        )
+        aprs.append(
+            RadioSetting(
+                "beacon_exit_dly",
+                "Beacon Message Delay",
+                RadioSettingValueList(BEACON_EXIT_DLY_LIST, BEACON_EXIT_DLY_LIST[_settings.beacon_exit_dly]),
+            )
+        )
 
         return top
 
     def set_settings(self, settings):
+        _settings = self._memobj.settings
         for element in settings:
             if not isinstance(element, RadioSetting):
                 self.set_settings(element)
                 continue
-            if "." in element.get_name():
-                bits = element.get_name().split(".")
-                obj = self._memobj
-                for bit in bits[:-1]:
-                    obj = getattr(obj, bit)
-                setting = bits[-1]
-            else:
-                obj = _settings
-                setting = element.get_name()
+            name = element.get_name()
+            value = element.value
 
-            if "line" in setting:
-                value = str(element.value).ljust(32, "\xFF")
-            else:
-                value = element.value
-            setattr(obj, setting, value)
+            print("setattr(_settings, {!r}, {!r}".format(name, value))
+
+            # perform an setting munging here
+            if name == "pri_ch":
+                # convert 0-indexed list into 1-indexed value
+                value.set_value(str(int(value.get_value()) + 1))
+
+            setattr(_settings, name, value)
