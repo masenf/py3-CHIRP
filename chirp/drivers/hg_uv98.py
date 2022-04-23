@@ -679,14 +679,14 @@ class LanchonlhHG_UV98(chirp_common.CloneModeRadio, chirp_common.ExperimentalRad
             RadioSetting(
                 "top_short",
                 "Top Button Short Press",
-                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.top_short]),
+                RadioSettingValueList(TOP_LIST, TOP_LIST[_settings.top_short]),
             )
         )
         buttons.append(
             RadioSetting(
                 "top_long",
                 "Top Button Long Press",
-                RadioSettingValueList(PF2_LIST, PF2_LIST[_settings.top_long]),
+                RadioSettingValueList(TOP_LIST, TOP_LIST[_settings.top_long]),
             )
         )
         vfo.append(
